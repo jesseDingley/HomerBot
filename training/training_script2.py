@@ -13,6 +13,7 @@ Before running on Google Cloud DL VM w/ Pytorch, it's important to make sure:
 
     - all packages are installed:
         $ pip install transformers
+        $ pip install wandb
 
     - Git LFS (large file storage) is installed:
 	    $ curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
@@ -26,7 +27,7 @@ Before running on Google Cloud DL VM w/ Pytorch, it's important to make sure:
 	    $ git clone https://huggingface.co/jesseD/worst_model_ever
 
 Typical usage:
-    $ python training_script2.py --dialogpt "large" --train "output_preprocessing_homer_7_concat.csv" --logger "wandb"
+    $ python training_script2.py --dialogpt "large" --train "output_preprocessing_homer_7_concat.csv" --logger "wandb" --run_id 12
 """
 
 
@@ -40,6 +41,7 @@ if __name__ == '__main__':
     parser.add_argument("--dialogpt", type=str, required = True, dest="dialogpt", choices = ["small", "medium", "large"], help = "DialoGPT model size.")
     parser.add_argument("--train", type=str, required = True, dest="data_path", help = "data file for training (train + val)")
     parser.add_argument("--logger", type = str, required = False, default = "none", dest = "logger", choices = ["wandb", "none"], help = "choose from wandb logging or no logging.")
+    parser.add_argument("--run_id", type = int, required=False, default= 0, dest="run_nb", help="Run id if logger is wandb")
     args = parser.parse_args()
 
 
@@ -110,7 +112,7 @@ DATA_PATH = args.data_path #"output_preprocessing_homer_7_concat.csv"
 TRAIN_VAL_RATIO = 0.8
 
 # freeze ratio i.e. what percentage of layers in DialoGPT do we freeze ?
-FREEZE_RATIO = 2/3 
+FREEZE_RATIO = 0 
 
 # The output directory where the model predictions and checkpoints will be written.
 OUTPUT_DIR = "./homer-dialogpt-chkpts"
@@ -119,17 +121,17 @@ OUTPUT_DIR = "./homer-dialogpt-chkpts"
 NUM_EPOCHS = 3
 
 # training / validation batch sizes 
-TRAIN_BATCH_SIZE =8
+TRAIN_BATCH_SIZE = 8
 VAL_BATCH_SIZE = 16
 
 # set to True to load best model after training
 LOAD_BEST_MODEL = False
 
 # number of warmup steps
-NUM_WARMUP_STEPS = 500
+NUM_WARMUP_STEPS = 0
 
 # weight decay
-WEIGHT_DECAY = 0.01
+WEIGHT_DECAY = 0
 
 # maximum sequence length
 MAX_LENGTH = 768
@@ -158,7 +160,7 @@ if THIRD_PARTY_LOGGER == "wandb":
     os.system("WANDB_PROJECT=dialogpt-homer")
 
 # run name
-RUN_NAME = "run-" + args.dialogpt + "-" + "-".join(args.data_path.split("_")[2:])
+RUN_NAME = "run-" + args.dialogpt + "-" + "-".join(args.data_path.split("_")[2:]) + "-" + args.run_id
 print(f"run name: {RUN_NAME}")
 print()
 
@@ -174,9 +176,8 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL, return_special_tokens_mask=True
 # set the padding token as the end of text token "<|endoftext|>"
 # tokenizer.pad_token = tokenizer.eos_token
 
-# add special tokens for padding + marking the start of a text.
+# add special token for padding 
 tokenizer.add_special_tokens({'pad_token': '<|pad|>'})
-tokenizer.add_special_tokens({'bos_token': '<|startoftext|>'})
 
 
 
@@ -244,25 +245,22 @@ class DialogueDataset(Dataset):
         dialogue_sessions = [" ".join(dialogue_session) for dialogue_session in dialogue_df.values.tolist()]
         
         # tokenize dialogue sessions
-        encoded_dialogue_sessions = []
+        self.encoded_dialogue_sessions = []
         print()
         print(f"encoding {len(dialogue_sessions)} dialogue sessions...")
         for i, dialogue_session in enumerate(dialogue_sessions):
             if i % 2000 == 0:
                 print(f"encoded {i}/{len(dialogue_sessions)} dialogue sessions.")
-            encoded_dialogue_session = tokenizer(tokenizer.bos_token + dialogue_session + tokenizer.eos_token, padding="max_length", max_length = max_length, truncation = True, return_tensors = "pt")
-            encoded_dialogue_sessions.append(encoded_dialogue_session)
-
-        # return input ids and attention mask
-        self.batch_encoding = encoded_dialogue_sessions
+            encoded_dialogue_session = tokenizer(dialogue_session + tokenizer.eos_token, padding="max_length", max_length = max_length, truncation = True, return_tensors = "pt")
+            self.encoded_dialogue_sessions.append(encoded_dialogue_session)
         
     def __getitem__(self, idx):
-        """Returns the item of index ids."""
-        return self.batch_encoding[idx]
+        """Returns the item of index idx."""
+        return self.encoded_dialogue_sessions[idx]
 
     def __len__(self):
-        """Returns the length of the dataset"""
-        return len(self.batch_encoding)
+        """Returns the length of the dataset."""
+        return len(self.encoded_dialogue_sessions)
 
 
 
