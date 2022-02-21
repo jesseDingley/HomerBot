@@ -24,7 +24,7 @@ Before running on Google Cloud DL VM w/ Pytorch, it's important to make sure:
 	    $ huggingface-cli login
 
     - model repo is cloned
-	    $ git clone https://huggingface.co/jesseD/worst_model_ever
+	    $ git clone https://huggingface.co/DingleyMaillotUrgell/homer-bot
 
 Typical usage:
     $ python training_script2.py --dialogpt "large" --train "output_preprocessing_homer_7_concat.csv" --logger "wandb" --run_id 12
@@ -65,9 +65,6 @@ from transformers import Trainer, TrainingArguments
 # various
 import os 
 
-# for gpu settings
-from numba import cuda
-
 # for W&B logging
 import wandb
 
@@ -99,7 +96,7 @@ MODEL = "microsoft/DialoGPT-" + args.dialogpt #"microsoft/DialoGPT-small"
 SAVED_MODEL_NAME = "homer-dialogpt"
 
 # hub model name
-HUB_NAME = "worst_model_ever"
+HUB_NAME = "homer-bot"
 
 # where to send logging results to (WandB, mlflow, etc...)
 THIRD_PARTY_LOGGER = args.logger
