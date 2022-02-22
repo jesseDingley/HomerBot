@@ -246,7 +246,7 @@ class DialogueDataset(Dataset):
         for i, dialogue_session in enumerate(dialogue_sessions):
             if i % 2000 == 0:
                 print(f"encoded {i}/{len(dialogue_sessions)} dialogue sessions.")
-            encoded_dialogue_session = tokenizer(dialogue_session + tokenizer.eos_token, padding = True, truncation = True, return_tensors = "pt")
+            encoded_dialogue_session = tokenizer(dialogue_session + tokenizer.eos_token, padding = "max_length", truncation = True, max_length=768, return_tensors = "pt")
             self.encoded_dialogue_sessions.append(encoded_dialogue_session)
         
     def __getitem__(self, idx):
@@ -345,14 +345,6 @@ print("Done.\n")
 
 
 
-"""Conclude wandb logging."""
-
-if THIRD_PARTY_LOGGER == "wandb":
-    wandb.finish()
-
-
-
-
 """Evaluate model with perplexity.
 
 perplexity is a measurement of how well a probability distribution or probability model predicts a sample.
@@ -364,6 +356,13 @@ print("Evaluating model...")
 
 eval_results = trainer.evaluate()
 print(f"Perplexity: {math.exp(eval_results['eval_loss']):.2f} \n")
+
+
+
+
+"""Conclude wandb logging"""
+if THIRD_PARTY_LOGGER == "wandb":
+    wandb.finish()
 
 
 

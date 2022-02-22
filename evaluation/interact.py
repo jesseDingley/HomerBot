@@ -18,11 +18,12 @@ for step in range(5):
     # generated a response while limiting the total chat history to 1000 tokens, 
     chat_history_ids = model.generate(
         bot_input_ids, 
-        max_length=1000,                    
+        max_length=500,                    
         pad_token_id=tokenizer.eos_token_id,  
-        no_repeat_ngram_size=3,       
+        no_repeat_ngram_size=3,
+        # num_beams = 50       
         do_sample=True, 
-        top_k=100, 
+        top_k=200, 
         top_p=0.7,
         temperature = 0.8
     )
