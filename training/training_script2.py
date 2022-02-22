@@ -27,7 +27,7 @@ Before running on Google Cloud DL VM w/ Pytorch, it's important to make sure:
 	    $ git clone https://huggingface.co/DingleyMaillotUrgell/homer-bot
 
 Typical usage:
-    $ python training_script2.py --dialogpt "large" --train "output_preprocessing_homer_7_concat.csv" --logger "wandb" --run_id 12
+    $ python training_script2.py --dialogpt "small" --train "output_preprocessing_homer_7_concat.csv" --logger "wandb" --run_id 12
 """
 
 
@@ -41,7 +41,7 @@ if __name__ == '__main__':
     parser.add_argument("--dialogpt", type=str, required = True, dest="dialogpt", choices = ["small", "medium", "large"], help = "DialoGPT model size.")
     parser.add_argument("--train", type=str, required = True, dest="data_path", help = "data file for training (train + val)")
     parser.add_argument("--logger", type = str, required = False, default = "none", dest = "logger", choices = ["wandb", "none"], help = "choose from wandb logging or no logging.")
-    parser.add_argument("--run_id", type = int, required=False, default= 0, dest="run_nb", help="Run id if logger is wandb")
+    parser.add_argument("--run_id", type = int, required=False, default= 0, dest="run_id", help="Run id if logger is wandb")
     args = parser.parse_args()
 
 
@@ -82,6 +82,8 @@ print("Done.\n")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Device:")
 print(device)
+print()
+print(f"Num devices: {torch.cuda.device_count()}")
 print()
 
 
@@ -130,9 +132,6 @@ NUM_WARMUP_STEPS = 0
 # weight decay
 WEIGHT_DECAY = 0
 
-# maximum sequence length
-MAX_LENGTH = 768
-
 # The checkpoint save strategy to adopt during training. Possible values are: "no" / "epochs" / "steps"
 # NOTE: SAVE_STRATEGY must equal EVALUATION_STRATEGY when LOAD_BEST_MODEL = True
 SAVE_STRATEGY = "epoch"
@@ -157,7 +156,7 @@ if THIRD_PARTY_LOGGER == "wandb":
     os.system("WANDB_PROJECT=dialogpt-homer")
 
 # run name
-RUN_NAME = "run-" + args.dialogpt + "-" + "-".join(args.data_path.split("_")[2:]) + "-" + args.run_id
+RUN_NAME = "run-" + args.dialogpt + "-" + "-".join(args.data_path.split("_")[2:]) + "-" + str(args.run_id)
 print(f"run name: {RUN_NAME}")
 print()
 
@@ -228,13 +227,12 @@ class DialogueDataset(Dataset):
                                         "attention mask": [1,1,...]} for each dialogue instance. 
     """
 
-    def __init__(self, dialogue_df, max_length):
+    def __init__(self, dialogue_df):
         """Initializes dataset attributes.
         
         Args:
             dialogue_df (pandas.core.DataFrame): dialogue dataframe where each row is a dialogue session.
                                                  dialogue session consists of several contexts + response.
-            max_length (int): padding length
         """
         
         # convert dialogue df to a list of strings (dialogue sessions)
@@ -248,7 +246,7 @@ class DialogueDataset(Dataset):
         for i, dialogue_session in enumerate(dialogue_sessions):
             if i % 2000 == 0:
                 print(f"encoded {i}/{len(dialogue_sessions)} dialogue sessions.")
-            encoded_dialogue_session = tokenizer(dialogue_session + tokenizer.eos_token, padding="max_length", max_length = max_length, truncation = True, return_tensors = "pt")
+            encoded_dialogue_session = tokenizer(dialogue_session + tokenizer.eos_token, padding = True, truncation = True, return_tensors = "pt")
             self.encoded_dialogue_sessions.append(encoded_dialogue_session)
         
     def __getitem__(self, idx):
@@ -263,20 +261,19 @@ class DialogueDataset(Dataset):
 
 
 print("encoding training set...")
-train_ds = DialogueDataset(train_df, max_length = MAX_LENGTH)
+train_ds = DialogueDataset(train_df)
 
 print()
 print("encoding validation set...")
-val_ds = DialogueDataset(val_df, max_length = MAX_LENGTH)
+val_ds = DialogueDataset(val_df)
 
 print("Done.\n")
 
 
 
 
-"""Empty GPU cache"""
-
-torch.cuda.empty_cache()
+# """Empty GPU cache"""
+# torch.cuda.empty_cache()
 
 
 

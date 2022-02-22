@@ -29,7 +29,7 @@ import math
 """Constants."""
 
 # model name
-MODEL = "jesseD/worst_model_ever"
+MODEL = "DingleyMaillotUrgell/homer-bot"
 
 # number of turns to run the evaluation on
 # (a turn is a turn from user then bot )
@@ -108,58 +108,110 @@ dialogue = [("Hi Homer!", "Hello!"), ("How are you?", "Good thanks."), ("Do you 
 # limit dialogue to a certain number of turns
 dialogue_splitted = dialogue[:TURNS]
 
-# init lists of generated replies (hpy) and ground truth replies (ref)
-generated_responses = []
-ground_truth_responses = []
+def run_model(generation_method):
+    """Runs model with specified generation method.
 
-# run dialogue
-for turn in range(1,len(dialogue_splitted)+1):
+    Args:
+        generation_method (str): Generation method. One of "greedy", "beam", "topk"
 
-    print(f"turn {turn} / {len(dialogue_splitted)} turns")
+    Returns:
+        tuple: (generated reponses, groud truth reponses)
+    """
+    # init lists of generated replies (hpy) and ground truth replies (ref)
+    generated_responses = []
+    ground_truth_responses = []
 
-    # Dialogue history: dialogue up to turn number "turn" excluding homers latest response
-    dialogue_history = " ".join(list(sum(dialogue_splitted[:turn], ()))[:-1])
+    # run dialogue
+    for turn in range(1,len(dialogue_splitted)+1):
 
-    # tokenize dialogue history to create bot input ids
-    dialogue_hist_ids = tokenizer.encode(dialogue_history + tokenizer.eos_token, return_tensors="pt") 
+        print(f"turn {turn} / {len(dialogue_splitted)} turns")
 
-    # generate a response while limiting the total chat history to 1000 tokens, 
-    # this code returns chat history ids + reponse ids in one tensor. 
-    history_and_response_ids = model.generate(
-        dialogue_hist_ids, 
-        max_length=1000,
-        pad_token_id=tokenizer.eos_token_id,  
-        no_repeat_ngram_size=3,       
-        do_sample=True, 
-        top_k=100, 
-        top_p=0.7,
-        temperature = 0.8
-    )
+        # Dialogue history: dialogue up to turn number "turn" excluding homers latest response
+        dialogue_history = " ".join(list(sum(dialogue_splitted[:turn], ()))[:-1])
 
-    # get generated response
-    response_ids = history_and_response_ids[:, dialogue_hist_ids.shape[-1]:][0]
+        # tokenize dialogue history to create bot input ids
+        dialogue_hist_ids = tokenizer.encode(dialogue_history + tokenizer.eos_token, return_tensors="pt") 
 
-    # decode response
-    generated_response = tokenizer.decode(response_ids, skip_special_tokens=True)
+        # generate a response while limiting the total chat history to 1000 tokens, 
+        # this code returns chat history ids + reponse ids in one tensor. 
+        if generation_method == "topk":
+            history_and_response_ids = model.generate(
+                dialogue_hist_ids, 
+                max_length=1000, 
+                pad_token_id=tokenizer.eos_token_id,  
+                no_repeat_ngram_size=3,       
+                do_sample=True, 
+                top_k=100, 
+                top_p=0.7,
+                temperature = 0.8
+            )
+        elif generation_method == "beam":
+            history_and_response_ids = model.generate(
+                dialogue_hist_ids,
+                max_length = 1000,
+                pad_token_id = tokenizer.eos_token_id,
+                no_repeat_ngram_size = 3,
+                num_beams = 10
+            )
+        elif generation_method == "greedy":
+            history_and_response_ids = model.generate(
+                dialogue_hist_ids,
+                max_length = 1000,
+                pad_token_id = tokenizer.eos_token_id,
+                no_repeat_ngram_size = 3
+            )
+        else:
+            raise ValueError("Generation method not recognized.")
 
-    # get ground truth response
-    ground_truth_response = dialogue_splitted[turn-1][1]
+        # get generated response
+        response_ids = history_and_response_ids[:, dialogue_hist_ids.shape[-1]:][0]
 
-    generated_responses.append(generated_response)
-    ground_truth_responses.append(ground_truth_response)
+        # decode response
+        generated_response = tokenizer.decode(response_ids, skip_special_tokens=True)
+
+        # get ground truth response
+        ground_truth_response = dialogue_splitted[turn-1][1]
+
+        generated_responses.append(generated_response)
+        ground_truth_responses.append(ground_truth_response)
 
 
-# flatten respone lists to strings
-generated_responses_string = " ".join(generated_responses)
-ground_truth_responses_string = " ".join(ground_truth_responses)
+    # flatten respone lists to strings
+    generated_responses_string = " ".join(generated_responses)
+    ground_truth_responses_string = " ".join(ground_truth_responses)
+
+    return generated_responses_string, ground_truth_responses_string
 
 
-
+TOPK_generated_responses_string, TOPK_ground_truth_responses_string = run_model("topk")
+BEAM_generated_responses_string, BEAM_ground_truth_responses_string = run_model("beam")
+GREEDY_generated_responses_string, GREEDY_ground_truth_responses_string = run_model("greedy")
 
 """Calculate BLEU + entropy."""
-# maybe even compare with a user imitating homer (i.e. replace model by a human quoi, ideally dan castellannata)
-print(f"BLEU-2: {BLEU(ref = ground_truth_responses_string, hyp = generated_responses_string, order=2)}")
-print(f"BLEU-4: {BLEU(ref = ground_truth_responses_string, hyp = generated_responses_string, order=4)}")
-print(f"Entropy: {entropy(generated_responses_string)}")
-print(f"Ideal entropy: {entropy_ideal(len(generated_responses_string))}")
+print("TOPK")
+print()
+print(f"BLEU-2: {BLEU(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string, order=2)}")
+print(f"BLEU-4: {BLEU(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string, order=4)}")
+print(f"Entropy: {entropy(TOPK_generated_responses_string)}")
+print(f"Ideal entropy: {entropy_ideal(len(TOPK_generated_responses_string))}")
+print()
+print()
+
+print("BEAM")
+print()
+print(f"BLEU-2: {BLEU(ref = BEAM_ground_truth_responses_string, hyp = BEAM_generated_responses_string, order=2)}")
+print(f"BLEU-4: {BLEU(ref = BEAM_ground_truth_responses_string, hyp = BEAM_generated_responses_string, order=4)}")
+print(f"Entropy: {entropy(BEAM_generated_responses_string)}")
+print(f"Ideal entropy: {entropy_ideal(len(BEAM_generated_responses_string))}")
+print()
+print()
+
+print("GREEDY")
+print()
+print(f"BLEU-2: {BLEU(ref = GREEDY_ground_truth_responses_string, hyp = GREEDY_generated_responses_string, order=2)}")
+print(f"BLEU-4: {BLEU(ref = GREEDY_ground_truth_responses_string, hyp = GREEDY_generated_responses_string, order=4)}")
+print(f"Entropy: {entropy(GREEDY_generated_responses_string)}")
+print(f"Ideal entropy: {entropy_ideal(len(GREEDY_generated_responses_string))}")
+print()
+print()
 # print("Dialo-GPT entropy: ")
