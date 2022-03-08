@@ -22,7 +22,7 @@ for step in range(5):
         bot_input_ids, 
         max_length=1000,                    
         pad_token_id=tokenizer.eos_token_id,  
-        # no_repeat_ngram_size=3,
+        no_repeat_ngram_size=3,
         # # num_beams = 50       
         do_sample=True, 
         top_k=100, 
