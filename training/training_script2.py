@@ -27,7 +27,7 @@ Before running on Google Cloud DL VM w/ Pytorch, it's important to make sure:
 	    $ git clone https://huggingface.co/DingleyMaillotUrgell/homer-bot
 
 Typical usage:
-    $ python training_script2.py --pretrained "microsoft/DialoGPT-small" --train "output_preprocessing_homer_7_concat.csv" --epochs 3 --logger "wandb" --run_id 12
+    $ python training_script2.py --pretrained "microsoft/DialoGPT-small" --train "output_preprocessing_homer_7_concat.csv" --epochs 3 --train_bs 8 --logger "wandb" --run_id 12
 """
 
 
@@ -41,6 +41,7 @@ if __name__ == '__main__':
     parser.add_argument("--pretrained", type=str, required = True, dest="pretrained", help = "Pretrained model i.e. 'microsoft/DialoGPT-small' etc")
     parser.add_argument("--train", type=str, required = True, dest="data_path", help = "data file for training (train + val)")
     parser.add_argument("--epochs", type=int, required=False, default=3, dest="epochs", help = "number of training epochs")
+    parser.add_argument("--train_bs", type=int, required=False, default=8, dest = "train_bs", help= "train batch size. Validation batch size will be double.")
     parser.add_argument("--logger", type = str, required = False, default = "none", dest = "logger", choices = ["wandb", "none"], help = "choose from wandb logging or no logging.")
     parser.add_argument("--run_id", type = int, required=False, default = 0, dest="run_id", help="Run id if logger is wandb")
     args = parser.parse_args()
@@ -123,8 +124,8 @@ OUTPUT_DIR = "./homer-dialogpt-chkpts"
 NUM_EPOCHS = int(args.epochs)
 
 # training / validation batch sizes 
-TRAIN_BATCH_SIZE = 8
-VAL_BATCH_SIZE = 16
+TRAIN_BATCH_SIZE = int(args.train_bs)
+VAL_BATCH_SIZE = TRAIN_BATCH_SIZE * 2
 
 # set to True to load best model after training
 LOAD_BEST_MODEL = False
