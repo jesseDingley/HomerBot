@@ -27,7 +27,7 @@ Before running on Google Cloud DL VM w/ Pytorch, it's important to make sure:
 	    $ git clone https://huggingface.co/DingleyMaillotUrgell/homer-bot
 
 Typical usage:
-    $ python training_script2.py --dialogpt "small" --train "output_preprocessing_homer_7_concat.csv" --logger "wandb" --run_id 12
+    $ python training_script2.py --pretrained "microsoft/DialoGPT-small" --train "output_preprocessing_homer_7_concat.csv" --epochs 3 --logger "wandb" --run_id 12
 """
 
 
@@ -38,10 +38,11 @@ from argparse import ArgumentParser
 if __name__ == '__main__':
     # Parse arguments
     parser = ArgumentParser()
-    parser.add_argument("--dialogpt", type=str, required = True, dest="dialogpt", choices = ["small", "medium", "large"], help = "DialoGPT model size.")
+    parser.add_argument("--pretrained", type=str, required = True, dest="pretrained", help = "Pretrained model i.e. 'microsoft/DialoGPT-small' etc")
     parser.add_argument("--train", type=str, required = True, dest="data_path", help = "data file for training (train + val)")
+    parser.add_argument("--epochs", type=int, required=False, default=3, dest="epochs", help = "number of training epochs")
     parser.add_argument("--logger", type = str, required = False, default = "none", dest = "logger", choices = ["wandb", "none"], help = "choose from wandb logging or no logging.")
-    parser.add_argument("--run_id", type = int, required=False, default= 0, dest="run_id", help="Run id if logger is wandb")
+    parser.add_argument("--run_id", type = int, required=False, default = 0, dest="run_id", help="Run id if logger is wandb")
     args = parser.parse_args()
 
 
@@ -92,7 +93,9 @@ print()
 """Constants / hyperparameters."""
 
 # pretrained model
-MODEL = "microsoft/DialoGPT-" + args.dialogpt #"microsoft/DialoGPT-small"
+#MODEL = "microsoft/DialoGPT-" + args.dialogpt #"microsoft/DialoGPT-small"
+# normally one of "microsoft/DialoGPT-small" or "DingleyMaillotUrgell/homer-bot"
+MODEL = args.pretrained
 
 # our fine-tuned dialogpt model's name
 SAVED_MODEL_NAME = "homer-dialogpt"
@@ -117,7 +120,7 @@ FREEZE_RATIO = 0
 OUTPUT_DIR = "./homer-dialogpt-chkpts"
 
 # number of training epochs
-NUM_EPOCHS = 3
+NUM_EPOCHS = int(args.epochs)
 
 # training / validation batch sizes 
 TRAIN_BATCH_SIZE = 8
