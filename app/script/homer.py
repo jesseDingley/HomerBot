@@ -52,7 +52,7 @@ def app():
     
     st.text_input("You: ", key="user_message", on_change=actualise_chat())
     
-        
+    
     if 'set_chat' not in st.session_state:
         st.session_state.set_chat = True
         write_chat()
@@ -62,25 +62,8 @@ def app():
         st.session_state.speaker_hist = []
         write_chat()
         
-    page_bg_img = '''
-    <style>
-        .stApp {
-            background-image: url("https://wallpaperaccess.com/full/1202258.jpg");
-            background-size: cover;
-        }
-    </style>
-    '''
     st.image("static/Homer_Robot_Icon.png")
     
-    robot_img ='''
-    <script type="text/javascript">
-    let collection = document.getElementsByClassName("css-1y35n86");
-    for(i=0; i < collection.length; i++){
-        let nodes = collection[i].children;
-        nodes[0].src = "https://www.sinoconcept.fr/wp-content/uploads/2020/07/cone-signalisation-pvc-orange-50.jpg";
-    }
-    </script>
-    '''
     
-    st.markdown(page_bg_img, unsafe_allow_html=True)
+    #st.markdown(robot_img, unsafe_allow_html=True)
     
