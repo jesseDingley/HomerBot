@@ -147,12 +147,13 @@ EVALUATION_STRATEGY = SAVE_STRATEGY if LOAD_BEST_MODEL else "steps"
 LOGGING_STRATEGY = "steps"
 
 # HOW MANY LAYERS TO FREEZE DURING FINE-TUNING
-if args.dialogpt == "small":
-    LAYERS_TO_FREEZE = int(FREEZE_RATIO * 12)
-elif args.dialogpt == "medium":
-    LAYERS_TO_FREEZE = int(FREEZE_RATIO * 24)
-else:
-    LAYERS_TO_FREEZE = int(FREEZE_RATIO * 36) 
+# if args.dialogpt == "small":
+#     LAYERS_TO_FREEZE = int(FREEZE_RATIO * 12)
+# elif args.dialogpt == "medium":
+#     LAYERS_TO_FREEZE = int(FREEZE_RATIO * 24)
+# else:
+#     LAYERS_TO_FREEZE = int(FREEZE_RATIO * 36) 
+LAYERS_TO_FREEZE = 0
 
 # enable wandb logging
 if THIRD_PARTY_LOGGER == "wandb":
@@ -160,7 +161,7 @@ if THIRD_PARTY_LOGGER == "wandb":
     os.system("WANDB_PROJECT=dialogpt-homer")
 
 # run name
-RUN_NAME = "run-" + args.dialogpt + "-" + "-".join(args.data_path.split("_")[2:]) + "-" + str(args.run_id)
+RUN_NAME = "run-" + args.pretrained + "-" + "-".join(args.data_path.split("_")[2:]) + "-" + str(args.run_id)
 print(f"run name: {RUN_NAME}")
 print()
 
