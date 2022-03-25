@@ -23,9 +23,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # for calculating BLEU scores
 from nltk.translate.bleu_score import sentence_bleu
-
+import nltk
+nltk.download("wordnet")
 # for calculating entropy
 import math
+import numpy as np
 
 # for calculating cosine similarity
 from transformers import BertTokenizer, BertModel
@@ -144,7 +146,8 @@ def cosine_similarity(ref: str, hyp: str)->float:
     # calcul cosine similarity beetwen the vectors
     cos = CosineSimilarity(dim=1, eps=1e-6)
     output = cos(ref_embedding, hyp_embedding)
-    return output[0]
+    return float(output[0])
+
 
 def doc2words(response_string: str)->List[str]:
     """Convert a string to a list of words lemmatized.
@@ -209,13 +212,32 @@ dialogue: List[Tuple[str,str]]  = [tuple(x) for x in dialogue_df.values.tolist()
 #         #[(other,       homer),    (other,          homer),          (other,                 homer        )]
 
 # limit dialogue to a certain number of turns
+N = 10 # calculate average metrics over n dialogues
+
+split_index = int(0.8*len(dialogue))
+test_dialogues = dialogue[split_index:]
+
+all = []
+sub_ = []
+l = 0
+for i, tple in enumerate(test_dialogues):
+    sub_.append(tple)
+    if i % 5 == 0 and i != 0:
+        all.append(sub_)
+        l += 1
+        sub_ = []
+    if l == N:
+        break
+    
+
 dialogue_splitted = dialogue[:TURNS]
 
-def run_model(generation_method):
+def run_model(generation_method, dialogue_splitted):
     """Runs model with specified generation method.
 
     Args:
         generation_method (str): Generation method. One of "greedy", "beam", "topk"
+        dialogue_splitted (list): [("Hi Homer!", "Hello!"), ...] of length 5
 
     Returns:
         tuple: (generated reponses, groud truth reponses)
@@ -289,44 +311,94 @@ def run_model(generation_method):
 
 
 if METHODS == "all" or METHODS == "topk": 
-    TOPK_generated_responses_string, TOPK_ground_truth_responses_string = run_model("topk")
+    # TOPK_generated_responses_string, TOPK_ground_truth_responses_string = run_model("topk", dialogue_splitted)
+    res = [run_model("topk", sub_dialogue) for sub_dialogue in all]
     """Calculate BLEU + entropy."""
     print()
     print("TOPK")
     print()
-    if METRICS == "all" or METRICS == "bleu-2": print(f"BLEU-2: {BLEU(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string, order=2)}")
-    if METRICS == "all" or METRICS == "bleu-4": print(f"BLEU-4: {BLEU(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string, order=4)}")
-    if METRICS == "all" or METRICS == "entropy": print(f"Entropy: {entropy(TOPK_generated_responses_string)}")
-    if METRICS == "all" or METRICS == "ideal entropy": print(f"Ideal entropy: {entropy_ideal(len(TOPK_generated_responses_string))}")
-    if METRICS == "all" or METRICS == "cosine similarity": print(f"Cosine similarity: {cosine_similarity(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string)}")
-    if METRICS == "all" or METRICS == "jaccard similarity": print(f"Jaccard similarity: {jaccard_similarity(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string)}")
+    # if METRICS == "all" or METRICS == "bleu-2": print(f"mean BLEU-2: {np.mean(np.array([BLEU(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string, order=2) for TOPK_generated_responses_string, TOPK_ground_truth_responses_string in res]))}")
+    # if METRICS == "all" or METRICS == "bleu-4": print(f"mean BLEU-4: {np.mean(np.array([BLEU(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string, order=4) for TOPK_generated_responses_string, TOPK_ground_truth_responses_string in res]))}")
+    if METRICS == "all" or METRICS == "entropy": print(f"mean Entropy: {np.mean(np.array([entropy(TOPK_generated_responses_string) for TOPK_generated_responses_string, _ in res]))}")
+    if METRICS == "all" or METRICS == "ideal entropy": print(f"Ideal entropy: {np.mean(np.array([entropy_ideal(len(TOPK_generated_responses_string)) for TOPK_generated_responses_string, _ in res]))}")
+    if METRICS == "all" or METRICS == "cosine similarity": print(f"Cosine similarity: {np.mean(np.array([cosine_similarity(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string) for TOPK_generated_responses_string, TOPK_ground_truth_responses_string in res]))}")
+    if METRICS == "all" or METRICS == "jaccard similarity": print(f"Jaccard similarity: {np.mean(np.array([jaccard_similarity(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string) for TOPK_generated_responses_string, TOPK_ground_truth_responses_string in res]))}")
     print()
     print()
     
 if METHODS == "all" or METHODS == "beam": 
-    BEAM_generated_responses_string, BEAM_ground_truth_responses_string = run_model("beam")
+    res = [run_model("beam", sub_dialogue) for sub_dialogue in all]
+    """Calculate BLEU + entropy."""
     print()
     print("BEAM")
     print()
-    if METRICS == "all" or METRICS == "bleu-2": print(f"BLEU-2: {BLEU(ref = BEAM_ground_truth_responses_string, hyp = BEAM_generated_responses_string, order=2)}")
-    if METRICS == "all" or METRICS == "bleu-4": print(f"BLEU-4: {BLEU(ref = BEAM_ground_truth_responses_string, hyp = BEAM_generated_responses_string, order=4)}")
-    if METRICS == "all" or METRICS == "entropy": print(f"Entropy: {entropy(BEAM_generated_responses_string)}")
-    if METRICS == "all" or METRICS == "ideal entropy": print(f"Ideal entropy: {entropy_ideal(len(BEAM_generated_responses_string))}")
-    if METRICS == "all" or METRICS == "cosine similarity": print(f"Cosine similarity: {cosine_similarity(ref = BEAM_ground_truth_responses_string, hyp = BEAM_generated_responses_string)}")
-    if METRICS == "all" or METRICS == "jaccard similarity": print(f"Jaccard similarity: {jaccard_similarity(ref = BEAM_ground_truth_responses_string, hyp = BEAM_generated_responses_string)}")
+    # if METRICS == "all" or METRICS == "bleu-2": print(f"mean BLEU-2: {np.mean(np.array([BLEU(ref = BEAM_ground_truth_responses_string, hyp = BEAM_generated_responses_string, order=2) for BEAM_generated_responses_string, BEAM_ground_truth_responses_string in res]))}")
+    # if METRICS == "all" or METRICS == "bleu-4": print(f"mean BLEU-4: {np.mean(np.array([BLEU(ref = BEAM_ground_truth_responses_string, hyp = BEAM_generated_responses_string, order=4) for BEAM_generated_responses_string, BEAM_ground_truth_responses_string in res]))}")
+    if METRICS == "all" or METRICS == "entropy": print(f"mean Entropy: {np.mean(np.array([entropy(BEAM_generated_responses_string) for BEAM_generated_responses_string, _ in res]))}")
+    if METRICS == "all" or METRICS == "ideal entropy": print(f"Ideal entropy: {np.mean(np.array([entropy_ideal(len(BEAM_generated_responses_string)) for BEAM_generated_responses_string, _ in res]))}")
+    if METRICS == "all" or METRICS == "cosine similarity": print(f"Cosine similarity: {np.mean(np.array([float(cosine_similarity(ref = BEAM_ground_truth_responses_string, hyp = BEAM_generated_responses_string)) for BEAM_generated_responses_string, BEAM_ground_truth_responses_string in res]))}")
+    if METRICS == "all" or METRICS == "jaccard similarity": print(f"Jaccard similarity: {np.mean(np.array([jaccard_similarity(ref = BEAM_ground_truth_responses_string, hyp = BEAM_generated_responses_string) for BEAM_generated_responses_string, BEAM_ground_truth_responses_string in res]))}")
     print()
     print()
 
+    
 if METHODS == "all" or METHODS == "greedy": 
-    GREEDY_generated_responses_string, GREEDY_ground_truth_responses_string = run_model("greedy")
+    res = [run_model("greedy", sub_dialogue) for sub_dialogue in all]
+    """Calculate BLEU + entropy."""
     print()
     print("GREEDY")
     print()
-    if METRICS == "all" or METRICS == "bleu-2": print(f"BLEU-2: {BLEU(ref = GREEDY_ground_truth_responses_string, hyp = GREEDY_generated_responses_string, order=2)}")
-    if METRICS == "all" or METRICS == "bleu-4": print(f"BLEU-4: {BLEU(ref = GREEDY_ground_truth_responses_string, hyp = GREEDY_generated_responses_string, order=4)}")
-    if METRICS == "all" or METRICS == "entropy": print(f"Entropy: {entropy(GREEDY_generated_responses_string)}")
-    if METRICS == "all" or METRICS == "ideal entropy": print(f"Ideal entropy: {entropy_ideal(len(GREEDY_generated_responses_string))}")
-    if METRICS == "all" or METRICS == "cosine similarity": print(f"Cosine similarity: {cosine_similarity(ref = GREEDY_ground_truth_responses_string, hyp = GREEDY_generated_responses_string)}")
-    if METRICS == "all" or METRICS == "jaccard similarity": print(f"Jaccard similarity: {jaccard_similarity(ref = GREEDY_ground_truth_responses_string, hyp = GREEDY_generated_responses_string)}")
+    if METRICS == "all" or METRICS == "bleu-2": print(f"mean BLEU-2: {np.mean(np.array([BLEU(ref = GREEDY_ground_truth_responses_string, hyp = GREEDY_generated_responses_string, order=2) for GREEDY_generated_responses_string, GREEDY_ground_truth_responses_string in res]))}")
+    if METRICS == "all" or METRICS == "bleu-4": print(f"mean BLEU-4: {np.mean(np.array([BLEU(ref = GREEDY_ground_truth_responses_string, hyp = GREEDY_generated_responses_string, order=4) for GREEDY_generated_responses_string, GREEDY_ground_truth_responses_string in res]))}")
+    if METRICS == "all" or METRICS == "entropy": print(f"mean Entropy: {np.mean(np.array([entropy(GREEDY_generated_responses_string) for GREEDY_generated_responses_string, _ in res]))}")
+    if METRICS == "all" or METRICS == "ideal entropy": print(f"Ideal entropy: {np.mean(np.array([entropy_ideal(len(GREEDY_generated_responses_string)) for GREEDY_generated_responses_string, _ in res]))}")
+    if METRICS == "all" or METRICS == "cosine similarity": print(f"Cosine similarity: {np.mean(np.array([cosine_similarity(ref = GREEDY_ground_truth_responses_string, hyp = GREEDY_generated_responses_string) for GREEDY_generated_responses_string, GREEDY_ground_truth_responses_string in res]))}")
+    if METRICS == "all" or METRICS == "jaccard similarity": print(f"Jaccard similarity: {np.mean(np.array([jaccard_similarity(ref = GREEDY_ground_truth_responses_string, hyp = GREEDY_generated_responses_string) for GREEDY_generated_responses_string, GREEDY_ground_truth_responses_string in res]))}")
     print()
     print()
+
+
+
+
+# if METHODS == "all" or METHODS == "topk": 
+#     TOPK_generated_responses_string, TOPK_ground_truth_responses_string = run_model("topk", dialogue_splitted)
+#     """Calculate BLEU + entropy."""
+#     print()
+#     print("TOPK")
+#     print()
+#     if METRICS == "all" or METRICS == "bleu-2": print(f"BLEU-2: {BLEU(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string, order=2)}")
+#     if METRICS == "all" or METRICS == "bleu-4": print(f"BLEU-4: {BLEU(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string, order=4)}")
+#     if METRICS == "all" or METRICS == "entropy": print(f"Entropy: {entropy(TOPK_generated_responses_string)}")
+#     if METRICS == "all" or METRICS == "ideal entropy": print(f"Ideal entropy: {entropy_ideal(len(TOPK_generated_responses_string))}")
+#     if METRICS == "all" or METRICS == "cosine similarity": print(f"Cosine similarity: {cosine_similarity(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string)}")
+#     if METRICS == "all" or METRICS == "jaccard similarity": print(f"Jaccard similarity: {jaccard_similarity(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string)}")
+#     print()
+#     print()
+    
+# if METHODS == "all" or METHODS == "beam": 
+#     BEAM_generated_responses_string, BEAM_ground_truth_responses_string = run_model("beam", dialogue_splitted)
+#     print()
+#     print("BEAM")
+#     print()
+#     if METRICS == "all" or METRICS == "bleu-2": print(f"BLEU-2: {BLEU(ref = BEAM_ground_truth_responses_string, hyp = BEAM_generated_responses_string, order=2)}")
+#     if METRICS == "all" or METRICS == "bleu-4": print(f"BLEU-4: {BLEU(ref = BEAM_ground_truth_responses_string, hyp = BEAM_generated_responses_string, order=4)}")
+#     if METRICS == "all" or METRICS == "entropy": print(f"Entropy: {entropy(BEAM_generated_responses_string)}")
+#     if METRICS == "all" or METRICS == "ideal entropy": print(f"Ideal entropy: {entropy_ideal(len(BEAM_generated_responses_string))}")
+#     if METRICS == "all" or METRICS == "cosine similarity": print(f"Cosine similarity: {cosine_similarity(ref = BEAM_ground_truth_responses_string, hyp = BEAM_generated_responses_string)}")
+#     if METRICS == "all" or METRICS == "jaccard similarity": print(f"Jaccard similarity: {jaccard_similarity(ref = BEAM_ground_truth_responses_string, hyp = BEAM_generated_responses_string)}")
+#     print()
+#     print()
+
+# if METHODS == "all" or METHODS == "greedy": 
+#     GREEDY_generated_responses_string, GREEDY_ground_truth_responses_string = run_model("greedy", dialogue_splitted)
+#     print()
+#     print("GREEDY")
+#     print()
+#     if METRICS == "all" or METRICS == "bleu-2": print(f"BLEU-2: {BLEU(ref = GREEDY_ground_truth_responses_string, hyp = GREEDY_generated_responses_string, order=2)}")
+#     if METRICS == "all" or METRICS == "bleu-4": print(f"BLEU-4: {BLEU(ref = GREEDY_ground_truth_responses_string, hyp = GREEDY_generated_responses_string, order=4)}")
+#     if METRICS == "all" or METRICS == "entropy": print(f"Entropy: {entropy(GREEDY_generated_responses_string)}")
+#     if METRICS == "all" or METRICS == "ideal entropy": print(f"Ideal entropy: {entropy_ideal(len(GREEDY_generated_responses_string))}")
+#     if METRICS == "all" or METRICS == "cosine similarity": print(f"Cosine similarity: {cosine_similarity(ref = GREEDY_ground_truth_responses_string, hyp = GREEDY_generated_responses_string)}")
+#     if METRICS == "all" or METRICS == "jaccard similarity": print(f"Jaccard similarity: {jaccard_similarity(ref = GREEDY_ground_truth_responses_string, hyp = GREEDY_generated_responses_string)}")
+#     print()
+#     print()
