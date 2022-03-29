@@ -177,13 +177,6 @@ def create_contexts_for_chosen_character(raw_character_text_list,spoken_words_li
     return contexts_list
 
 
-def remove_empty_context(contexts_list):
-    new_contexts_list = []
-    for context in contexts_list:
-        if "" not in context:
-            new_contexts_list.append(context)
-
-    return new_contexts_list
 
 
 def create_columns(nb_context):
@@ -205,3 +198,32 @@ def create_columns(nb_context):
     columns_list.append("response")
 
     return columns_list
+
+
+
+
+def context_between_20_150(df,num):
+    """ Deletes lines where contexts sizes is not between 20 and 150 characters from the dataframe.
+
+    Args:
+        df (pandas.DataFrame): Dataframe of contexts and response.
+        num (int): Number id of the context.
+
+    Returns:
+        pandas.DataFrame: Dataframe without undesired lines.
+    """
+    return df[df["ctxt"+str(num)].apply(lambda x: len(x)>20) & df["ctxt"+str(num)].apply(lambda x: len(x)<150)]
+
+
+
+
+def responses_between_20_150(df):
+    """ Deletes lines where response size is not between 20 and 150 characters from the dataframe.
+
+    Args:
+        df (pandas.DataFrame): Dataframe of contexts and response.
+
+    Returns:
+        pandas.DataFrame: Dataframe without undesired lines.
+    """
+    return df[df["response"].apply(lambda x: len(x)>20) & df["response"].apply(lambda x: len(x)<150)]

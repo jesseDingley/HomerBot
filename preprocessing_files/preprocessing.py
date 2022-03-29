@@ -1,10 +1,17 @@
+""" Main file of the preprocessing."""
+
+
+
+
 # librairies
 import numpy as np
 import pandas as pd
 from argparse import ArgumentParser
 
+
 # utils file
 import preprocessing_utils as pu
+import preprocessing_visu as pv
 
 
 # argument type to make sure that --nb_contexts > 0
@@ -44,8 +51,6 @@ if __name__ == '__main__':
     CONCATENATION = args.concatenation
 
 
-
-
 # save the original dataset into pandas dataframe
 df = pd.read_csv("simpsons_dataset.csv")
 
@@ -55,6 +60,12 @@ df = pu.delete_incomplete_lines(df)
 # save the dataframe in two lists : one for the character name and the other for his words
 char_list, words_list = pu.dataframe_to_lists(df)
 
+# show the number of responses from the Simpsons family
+pv.show_number_responses_per_char(char_list)
+
+# show the length of Homer's responses
+pv.show_homer_responses_length(char_list,words_list)
+
 # if CONCATENATION, then concatene words said by same character in one scene
 if CONCATENATION:
     char_list, words_list = pu.concatene_words_consecutive_character_by_scene(char_list,words_list)
@@ -62,9 +73,7 @@ if CONCATENATION:
 # create number of contexts wanted from each response of the chosen character
 contexts_list = pu.create_contexts_for_chosen_character(char_list,words_list,NB_CONTEXTS,CHOSEN_CHARACTER)
 
-contexts_list = pu.remove_empty_context(contexts_list)
-
-# save contexts in a dictionnary
+# # save contexts in a dictionnary
 dic = {}
 for i, line in enumerate(contexts_list):
     dic[i] = line
@@ -74,6 +83,11 @@ columns_list = pu.create_columns(NB_CONTEXTS)
 
 # create final dataframe from contexts dictionnary
 df_final = pd.DataFrame.from_dict(dic, orient="index", columns=columns_list)
+
+# delete lines where context or response length isn't between 20 and 150 characters
+for i in range(NB_CONTEXTS):
+    df_final = pu.context_between_20_150(df_final,i+1)
+df_final = pu.responses_between_20_150(df_final)
 
 # export the final dataframe to csv format
 if CONCATENATION:
