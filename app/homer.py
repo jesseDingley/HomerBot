@@ -60,7 +60,4 @@ def app():
     if st.button(label="Reset chat", key="reset"):
         st.session_state.message_hist = []
         st.session_state.speaker_hist = []
-        write_chat()
-        
-    st.image("static/Homer_Robot_Icon.png")
-    
+        write_chat()    

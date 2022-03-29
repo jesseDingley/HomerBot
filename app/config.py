@@ -13,7 +13,7 @@ class APISettings:
     
     ########################        huggingface        ########################
     
-    api_url: dict = {"Homer": "https://api-inference.huggingface.co/models/microsoft/DialoGPT-large"}
+    api_url: dict = {"Homer": "https://huggingface.co/DingleyMaillotUrgell/homer-bot"}
     api_token: str = "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"
     
 
