@@ -19,7 +19,7 @@ from argparse import ArgumentParser
 if __name__ == '__main__':
     # Parse arguments
     parser = ArgumentParser()
-    parser.add_argument("--model", type=str, required=True, default = "DingleyMaillotUrgell/homer-bot", dest = "model", help = "model to evaluate.")
+    parser.add_argument("--model", type=str, required=False, default = "DingleyMaillotUrgell/homer-bot", dest = "model", help = "model to evaluate.")
     parser.add_argument("--test", type=str, required=True, dest="data_path", help = "data file for testing")
     parser.add_argument("--generation_methods", type=str, default='all', choices=['all','topk','greedy','beam'], dest="generation_methods", help="The name of the generation method")
     parser.add_argument("--metrics", type=str, default='all', choices=['all','bleu-2','bleu-4','entropy','ideal entropy','cosine similarity', 'jaccard similarity'], dest="metrics", help="The name of the metrics")
@@ -132,7 +132,7 @@ def entropy_ideal(length):
 
 
 
-def entropy(string):
+def entropy(ref, hyp):
     """Calculates the Shannon entropy of a string.
     
     Args:
@@ -143,10 +143,12 @@ def entropy(string):
     """
 
     # get probability of chars in string
-    prob = [float(string.count(c)) / len(string) for c in dict.fromkeys(list(string))]
-
+    prob_ref = [float(ref.count(c)) / len(ref) for c in dict.fromkeys(list(ref))]
+    prob_hyp = [float(hyp.count(c)) / len(hyp) for c in dict.fromkeys(list(hyp))]
+    entropy_ref = - sum([ p * math.log(p) / math.log(2.0) for p in prob_ref ])
+    entropy_hyp = - sum([ p * math.log(p) / math.log(2.0) for p in prob_hyp ])
     # calculate the entropy
-    return - sum([ p * math.log(p) / math.log(2.0) for p in prob ])
+    return entropy_hyp / entropy_ref
 
 
 
@@ -228,7 +230,7 @@ def doc2words(response_string: str)->List[str]:
 
 
 
-def jaccard_similarity(ref: str, hyp: str)->float:
+def jaccard_similarity(res)->float:
     """Calculates Jaccard similarity
 
     Args:
@@ -239,8 +241,10 @@ def jaccard_similarity(ref: str, hyp: str)->float:
         float: Jaccard simalrity
     """
     # List the unique words in a document
-    words_ref = set(doc2words(ref))
-    words_hyp = set(doc2words(hyp))
+    ref = [ref for ref, _ in res]
+    hyp = [hyp for _, hyp in res]
+    words_ref = set(doc2words(''.join(ref)))
+    words_hyp = set(doc2words(''.join(hyp)))
     
     # Find the intersection of words list of ref & hyp
     intersection = words_ref.intersection(words_hyp)
@@ -250,7 +254,7 @@ def jaccard_similarity(ref: str, hyp: str)->float:
         
     # Calculate Jaccard similarity score 
     # using length of intersection set divided by length of union set
-    return float(len(intersection)) / len(union)
+    return 1 - float(len(intersection)) / len(union)
 
 
 
@@ -390,10 +394,10 @@ if METHODS == "all" or METHODS == "topk":
     print()
     if METRICS == "all" or METRICS == "bleu-2": print(f"mean BLEU-2: {np.mean(np.array([BLEU(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string, order=2) for TOPK_generated_responses_string, TOPK_ground_truth_responses_string in res]))}")
     if METRICS == "all" or METRICS == "bleu-4": print(f"mean BLEU-4: {np.mean(np.array([BLEU(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string, order=4) for TOPK_generated_responses_string, TOPK_ground_truth_responses_string in res]))}")
-    if METRICS == "all" or METRICS == "entropy": print(f"mean Entropy: {np.mean(np.array([entropy(TOPK_generated_responses_string) for TOPK_generated_responses_string, _ in res]))}")
+    if METRICS == "all" or METRICS == "entropy": print(f"mean Entropy: {np.mean(np.array([entropy(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string) for TOPK_ground_truth_responses_string, TOPK_generated_responses_string in res]))}")
     if METRICS == "all" or METRICS == "ideal entropy": print(f"mean Ideal entropy: {np.mean(np.array([entropy_ideal(len(TOPK_generated_responses_string)) for TOPK_generated_responses_string, _ in res]))}")
     if METRICS == "all" or METRICS == "cosine similarity": print(f"mean Cosine similarity: {np.mean(np.array([cosine_similarity(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string, method='st') for TOPK_generated_responses_string, TOPK_ground_truth_responses_string in res]))}")
-    if METRICS == "all" or METRICS == "jaccard similarity": print(f"mean Jaccard similarity: {np.mean(np.array([jaccard_similarity(ref = TOPK_ground_truth_responses_string, hyp = TOPK_generated_responses_string) for TOPK_generated_responses_string, TOPK_ground_truth_responses_string in res]))}")
+    if METRICS == "all" or METRICS == "jaccard similarity": print(f"mean Jaccard similarity: {jaccard_similarity(res)}")
     print()
     print()
     
