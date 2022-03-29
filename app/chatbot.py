@@ -1,6 +1,5 @@
 import requests
-import threading
-from app.core.config import get_api_settings
+from app.config import get_api_settings
 
 settings = get_api_settings()
 
@@ -41,23 +40,4 @@ def get_response(bot,msg_history,spk_history):
     headers = {"Authorization": f"Bearer {API_TOKEN}"}
     response = requests.post(API_URL[bot], headers=headers, json=payload)
     bot_response = response.json()
-    print()
-    print()
-    print(bot_response)
     return bot_response["generated_text"]
-
-
-class BotReply (threading.Thread):
-        def __init__(self, name, speaker_history, message_history):
-            threading.Thread.__init__(self)
-            self.name = name
-            self.message_history = message_history
-            self.speaker_history = speaker_history
-            self._return = None
-            
-        def run(self):
-            self._return = get_response(self.name, self.message_history, self.speaker_history)
-        
-        def join(self, *args):
-            threading.Thread.join(self, *args)
-            return self._return

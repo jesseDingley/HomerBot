@@ -1,6 +1,7 @@
-from pydantic import BaseSettings
-
-class APISettings(BaseSettings):
+class APISettings:
+    
+    def __init__(self) -> None:
+        pass
 
     ########################     Global information    ########################
     

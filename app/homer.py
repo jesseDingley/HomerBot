@@ -1,6 +1,6 @@
 import streamlit as st
 from streamlit_chat import message
-from app.chatbot.chatbot import get_response
+from app.chatbot import get_response
 
 NB_CHAT = 5
 
@@ -63,7 +63,4 @@ def app():
         write_chat()
         
     st.image("static/Homer_Robot_Icon.png")
-    
-    
-    #st.markdown(robot_img, unsafe_allow_html=True)
     
