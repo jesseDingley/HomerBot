@@ -14,6 +14,7 @@ class APISettings:
     ########################        huggingface        ########################
     
     api_url: dict = {"Homer": "https://huggingface.co/DingleyMaillotUrgell/homer-bot"}
+    api_model: str = "DingleyMaillotUrgell/homer-bot"
     api_token: str = "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"
     
 
