@@ -13,6 +13,12 @@ From the command line:
 $ python evaluation/interact.py
 ```
 
+Or with streamlit:
+
+```
+$ streamlit run main.py
+```
+
 Or by hand:
 
 ```python
