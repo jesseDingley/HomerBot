@@ -2,7 +2,7 @@
 
 This model is a fine-tuned [DialoGPT](https://huggingface.co/microsoft/DialoGPT-medium) (medium version) on Simpsons [scripts](https://www.kaggle.com/datasets/pierremegret/dialogue-lines-of-the-simpsons).
 
-More specifically, we fine-tune DialoGPT-medium for 3 epochs on 10K **(character utterance, Homer's response)** pairs
+More specifically, we fine-tune DialoGPT-medium for 3 epochs on 10K **(character utterance, Homer's response)** pairs.
 
 
 ### Usage
